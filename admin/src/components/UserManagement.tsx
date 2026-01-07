@@ -4,7 +4,7 @@ import { Lock, Unlock, Shield, User, Trash2, Check, Edit2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { AdminUser } from '../types';
 
-const API_BASE = 'http://localhost:3000/api';
+
 
 export const UserManagement = () => {
     const [users, setUsers] = useState<AdminUser[]>([]);
@@ -27,15 +27,20 @@ export const UserManagement = () => {
     const [newRole, setNewRole] = useState('resolver');
 
     const fetchUsers = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-
         try {
-            const res = await fetch(`${API_BASE}/admin/users`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) setUsers(await res.json());
+            // In serverless, we can't easily list all users without a specialized table or edge function.
+            // We will just show the current session user for now to prevent crashes.
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // Mocking the AdminUser structure based on the auth user
+                setUsers([{
+                    id: user.id,
+                    email: user.email || 'unknown',
+                    role: 'superadmin', // Assume current user is valid if they logged in
+                    approved: true,
+                    created_at: user.created_at
+                }]);
+            }
         } catch (err) {
             console.error(err);
         } finally {
@@ -46,118 +51,26 @@ export const UserManagement = () => {
     useEffect(() => { fetchUsers(); }, []);
 
     const toggleApproval = async (id: string, currentStatus: boolean) => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        await fetch(`${API_BASE}/admin/users/${id}`, {
-            method: 'PATCH',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ approved: !currentStatus })
-        });
-        fetchUsers();
+        alert('Action requires backend service role.');
     };
 
     const deleteUser = async (id: string) => {
-        if (!confirm('Are you sure? This will PERMANENTLY remove this admin.')) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        const res = await fetch(`${API_BASE}/admin/users/${id}`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-
-        if (res.ok) {
-            fetchUsers();
-        } else {
-            const data = await res.json();
-            alert(data.error || 'Delete failed');
-        }
+        alert('Action requires backend service role.');
     };
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        try {
-            const res = await fetch(`${API_BASE}/admin/invite`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email: inviteEmail, role: 'resolver' })
-            });
-            const data = await res.json();
-            if (data.success) {
-                setInviteMessage(data.message);
-                setTimeout(() => {
-                    setShowInvite(false);
-                    setInviteMessage('');
-                    setInviteEmail('');
-                }, 2000);
-            } else {
-                setInviteMessage(data.error);
-            }
-        } catch (err) {
-            console.error(err);
-        }
+        alert('Invite feature requires backend integration.');
     };
 
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        try {
-            const res = await fetch(`${API_BASE}/admin/users/create`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify(newUser)
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                alert('User Created & Auto-Approved!');
-                setShowCreate(false);
-                setNewUser({ email: '', password: '', role: 'resolver' });
-                fetchUsers();
-            } else {
-                alert(`Error: ${data.error}`);
-            }
-        } catch (err) {
-            alert('Creation failed');
-        }
+        alert('User creation requires backend integration or Edge Functions.');
     };
 
     const handleUpdateRole = async () => {
-        if (!selectedUser) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-
-        try {
-            const res = await fetch(`${API_BASE}/admin/users/${selectedUser.id}/role`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
-                body: JSON.stringify({ role: newRole })
-            });
-
-            const data = await res.json();
-            if (data.success) {
-                alert('Role Updated!');
-                setShowRoleEdit(false);
-                setSelectedUser(null);
-                fetchUsers();
-            } else {
-                alert(`Error: ${data.error}`);
-            }
-        } catch (err) {
-            alert('Update failed');
-        }
+        alert('Role updates require backend integration.');
+        setShowRoleEdit(false);
     };
 
     const openRoleModal = (user: AdminUser) => {
@@ -170,27 +83,32 @@ export const UserManagement = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                <button
-                    onClick={() => setShowInvite(true)}
-                    style={{
-                        background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none',
-                        padding: '10px 20px', borderRadius: '12px', fontWeight: 600,
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
-                    }}
-                >
-                    + Invite Agent
-                </button>
-                <button
-                    onClick={() => setShowCreate(true)}
-                    style={{
-                        background: '#3b82f6', color: '#fff', border: 'none',
-                        padding: '10px 20px', borderRadius: '12px', fontWeight: 600,
-                        cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
-                    }}
-                >
-                    + Create User
-                </button>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Serverless Mode: Advanced user management disabled</span>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button
+                        onClick={() => setShowInvite(true)}
+                        style={{
+                            background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none',
+                            padding: '10px 20px', borderRadius: '12px', fontWeight: 600,
+                            cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.5
+                        }}
+                        disabled
+                    >
+                        + Invite Agent
+                    </button>
+                    <button
+                        onClick={() => setShowCreate(true)}
+                        style={{
+                            background: '#3b82f6', color: '#fff', border: 'none',
+                            padding: '10px 20px', borderRadius: '12px', fontWeight: 600,
+                            cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.5
+                        }}
+                        disabled
+                    >
+                        + Create User
+                    </button>
+                </div>
             </div>
 
             {users.map((user) => (

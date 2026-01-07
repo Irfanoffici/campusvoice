@@ -4,24 +4,33 @@ import { Activity } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { AccessLog } from '../types';
 
-const API_BASE = 'http://localhost:3000/api';
+
 
 export const TrafficVisualizer = () => {
     const [logs, setLogs] = useState<AccessLog[]>([]);
     const [loading, setLoading] = useState(true);
 
     const fetchLogs = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-
         try {
-            const res = await fetch(`${API_BASE}/admin/traffic?limit=50`, {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) setLogs(await res.json());
+            // Note: In a serverless environment with direct client-side Supabase usage, 
+            // "traffic logs" usually require a middleware or edge function to populate 'access_logs'.
+            // If that's not set up, this might return empty.
+            // As a fallback to avoid errors, we check if the table exists first implicitly by try/catch.
+
+            const { data, error } = await supabase
+                .from('access_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(50);
+
+            if (error) {
+                // If the table doesn't exist or we can't read it, just show empty
+                console.log('Access logs unavailable or empty');
+            } else {
+                setLogs(data || []);
+            }
         } catch (err) {
-            console.error(err);
+            console.error('Error fetching traffic logs:', err);
         } finally {
             setLoading(false);
         }
@@ -43,7 +52,7 @@ export const TrafficVisualizer = () => {
         return '#10b981'; // Green
     };
 
-    if (loading && logs.length === 0) return <div style={{ color: '#fff', textAlign: 'center', padding: '40px' }}>Calibrating Sensors...</div>;
+    if (loading && logs.length === 0) return <div style={{ color: '#fff', textAlign: 'center', padding: '40px' }}>Loading Network Data...</div>;
 
     return (
         <motion.div

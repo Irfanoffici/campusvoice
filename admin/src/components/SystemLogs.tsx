@@ -3,34 +3,43 @@ import { Terminal, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { AdminLog } from '../types';
 
-const API_BASE = 'http://localhost:3000/api';
+
 
 export const SystemLogs = () => {
     const [logs, setLogs] = useState<AdminLog[]>([]);
 
     const fetchLogs = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
+        try {
+            const { data, error } = await supabase
+                .from('admin_logs')
+                .select('*')
+                .order('created_at', { ascending: false })
+                .limit(100);
 
-        const res = await fetch(`${API_BASE}/admin/logs`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        if (res.ok) setLogs(await res.json());
+            if (error) throw error;
+            setLogs(data || []);
+        } catch (err) {
+            console.error('Error fetching logs:', err);
+        }
     };
 
     useEffect(() => { fetchLogs(); }, []);
 
     const flushLogs = async () => {
         if (!confirm('WARNING: This will wipe ALL audit logs locally. This cannot be undone.')) return;
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
 
-        await fetch(`${API_BASE}/admin/logs`, {
-            method: 'DELETE',
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        fetchLogs();
+        try {
+            const { error } = await supabase
+                .from('admin_logs')
+                .delete()
+                .neq('id', 0); // Delete all rows
+
+            if (error) throw error;
+            fetchLogs();
+        } catch (err) {
+            console.error('Error flushing logs:', err);
+            alert('Failed to flush logs');
+        }
     };
 
     return (
