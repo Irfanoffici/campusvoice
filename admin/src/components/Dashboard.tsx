@@ -48,7 +48,7 @@ export const Dashboard: React.FC = () => {
     };
 
     // Superadmin State
-    const [role, setRole] = useState<AdminRole>('admin');
+    const [role] = useState<AdminRole>('admin');
     const [currentTab, setCurrentTab] = useState<'feedback' | 'users' | 'logs' | 'traffic' | 'metrics'>('feedback');
     const [showManualEntry, setShowManualEntry] = useState(false);
 

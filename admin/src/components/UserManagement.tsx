@@ -18,7 +18,6 @@ export const UserManagement = () => {
 
     // Invite State
     const [inviteEmail, setInviteEmail] = useState('');
-    const [inviteMessage, setInviteMessage] = useState('');
 
     // Manual Create State
     const [newUser, setNewUser] = useState({ email: '', password: '', role: 'resolver' });
@@ -50,11 +49,11 @@ export const UserManagement = () => {
 
     useEffect(() => { fetchUsers(); }, []);
 
-    const toggleApproval = async (id: string, currentStatus: boolean) => {
+    const toggleApproval = async (_id: string, _currentStatus: boolean) => {
         alert('Action requires backend service role.');
     };
 
-    const deleteUser = async (id: string) => {
+    const deleteUser = async (_id: string) => {
         alert('Action requires backend service role.');
     };
 
