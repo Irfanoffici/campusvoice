@@ -1,27 +1,40 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Database, Server, Cpu } from 'lucide-react';
+import { Database, Server } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { SystemHealth } from '../types';
 
-const API_BASE = 'http://localhost:3000/api';
+
 
 export const SystemVisualizer = () => {
     const [health, setHealth] = useState<SystemHealth | null>(null);
     const [loading, setLoading] = useState(true);
 
     const fetchHealth = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
-        if (!token) return;
-
         try {
-            const res = await fetch(`${API_BASE}/admin/system-health`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            // Check basic connectivity checking a public table or just assuming true if query works
+            const { count: feedbackCount, error: fError } = await supabase.from('feedback').select('*', { count: 'exact', head: true });
+
+            // For admins, we might not have access to auth.users. 
+            // We'll try to count from a public profiles table if it exists, or just default to 1
+            const { count: logsCount } = await supabase.from('admin_logs').select('*', { count: 'exact', head: true });
+
+            if (fError) throw fError;
+
+            setHealth({
+                status: 'Operational',
+                uptime: 0, // Not applicable in serverless
+                memory: { rss: 0, heapTotal: 0, heapUsed: 0, external: 0, arrayBuffers: 0 }, // Mocked
+                counts: {
+                    feedback: feedbackCount || 0,
+                    admins: 1, // Placeholder
+                    logs: logsCount || 0
+                },
+                timestamp: new Date().toISOString()
             });
-            if (res.ok) setHealth(await res.json());
         } catch (err) {
-            console.error(err);
+            console.error('Health check failed', err);
+            setHealth(prev => prev ? { ...prev, status: 'Degraded' } : null);
         } finally {
             setLoading(false);
         }
@@ -29,24 +42,14 @@ export const SystemVisualizer = () => {
 
     useEffect(() => {
         fetchHealth();
-        const interval = setInterval(fetchHealth, 5000); // 5s Polling
+        const interval = setInterval(fetchHealth, 10000); // 10s Polling
         return () => clearInterval(interval);
     }, []);
 
-    if (loading || !health) return <div>Initializing Metrics...</div>;
+    if (loading) return <div>Initializing Metrics...</div>;
+    if (!health) return <div>System Status Unavailable</div>;
 
-    const formatBytes = (bytes: number) => {
-        const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-        if (bytes === 0) return '0 Byte';
-        const i = parseInt(Math.floor(Math.log(bytes) / Math.log(1024)).toString());
-        return Math.round(bytes / Math.pow(1024, i)) + ' ' + sizes[i];
-    };
 
-    const formatUptime = (seconds: number) => {
-        const h = Math.floor(seconds / 3600);
-        const m = Math.floor((seconds % 3600) / 60);
-        return `${h}h ${m}m`;
-    };
 
     return (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px' }}>
@@ -65,35 +68,7 @@ export const SystemVisualizer = () => {
                     {health.status}
                 </div>
                 <div style={{ color: 'rgba(255,255,255,0.4)', fontSize: '0.9rem' }}>
-                    Uptime: {formatUptime(health.uptime)}
-                </div>
-            </motion.div>
-
-            {/* Memory Usage */}
-            <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
-                style={{
-                    background: 'rgba(59, 130, 246, 0.05)',
-                    border: '1px solid rgba(59, 130, 246, 0.2)',
-                    borderRadius: '20px', padding: '24px'
-                }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '20px', color: '#3b82f6' }}>
-                    <Cpu size={24} /> <h3 style={{ margin: 0 }}>Memory Load</h3>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>RSS (Resident)</span>
-                    <span style={{ color: '#fff' }}>{formatBytes(health.memory.rss)}</span>
-                </div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ color: 'rgba(255,255,255,0.6)' }}>Heap Used</span>
-                    <span style={{ color: '#fff' }}>{formatBytes(health.memory.heapUsed)}</span>
-                </div>
-                <div style={{ width: '100%', height: '4px', background: 'rgba(255,255,255,0.1)', borderRadius: '2px', marginTop: '15px' }}>
-                    <div style={{
-                        width: `${(health.memory.heapUsed / health.memory.heapTotal) * 100}%`,
-                        height: '100%',
-                        background: '#3b82f6',
-                        borderRadius: '2px'
-                    }} />
+                    Mode: Serverless / Cloud
                 </div>
             </motion.div>
 
@@ -120,6 +95,7 @@ export const SystemVisualizer = () => {
                     <span style={{ color: '#fff', fontWeight: 600 }}>{health.counts.logs}</span>
                 </div>
             </motion.div>
+
 
         </div>
     );

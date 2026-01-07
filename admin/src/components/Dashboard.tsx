@@ -25,7 +25,7 @@ import { TrafficVisualizer } from './TrafficVisualizer';
 import { Edit, X } from 'lucide-react';
 import { ToastContainer, type ToastProps, type ToastType } from './Toast';
 
-const API_BASE = 'http://localhost:3000/api';
+
 
 export const Dashboard: React.FC = () => {
     const [stats, setStats] = useState<Stats | null>(null);
@@ -87,68 +87,41 @@ export const Dashboard: React.FC = () => {
 
     const fetchData = async (isBackground = false) => {
         try {
-            // Only show partial loading if we don't have data yet, otherwise background update
             if (!isBackground && feedback.length === 0) setLoading(true);
 
-            // Get current session token
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+            // Fetch Stats (Calculate manually from DB for now)
+            const { count: total } = await supabase.from('feedback').select('*', { count: 'exact', head: true });
+            const { data: allItems } = await supabase.from('feedback').select('category, priority, status');
 
-            if (!token) {
-                console.error('No session token found');
-                return;
-            }
+            // derive stats
+            const byCategory = allItems?.reduce((acc: any[], curr) => {
+                const found = acc.find(c => c.category === curr.category);
+                if (found) found.count++;
+                else acc.push({ category: curr.category, count: 1 });
+                return acc;
+            }, []) || [];
 
-            const headers = {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            };
+            const byPriority = allItems?.reduce((acc: any[], curr) => {
+                const found = acc.find(p => p.priority === curr.priority);
+                if (found) found.count++;
+                else acc.push({ priority: curr.priority, count: 1 });
+                return acc;
+            }, []) || [];
 
-            // Fetch Role (Check if superadmin)
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // We can also fetch from endpoint if needed, but let's assume valid session implies role check via API later
-                // or we can fetch strict role from our new endpoint if we are allowed.
-                // Actually, let's just try to hit the /users endpoint. If it works, we are superadmin? 
-                // Better: Use a dedicated check or decoding, but for now we will rely on a fetch.
-                // Let's manually fetch the role from the admins table via Supabase client directly since we have the token.
-                const { data: adminData } = await supabase
-                    .from('admins')
-                    .select('role')
-                    .eq('id', user.id)
-                    .single();
-                if (adminData) setRole(adminData.role as AdminRole);
-            }
+            setStats({ total: total || 0, byCategory, byPriority, recent: [] });
 
-            // Fetch Stats
-            const statsRes = await fetch(`${API_BASE}/stats`, { headers });
+            // Fetch Feedback
+            let query = supabase.from('feedback').select('*').order('created_at', { ascending: false }).limit(50);
 
-            if (statsRes.status === 403) {
-                setLoading(false);
-                setRole('pending' as any); // Use 'pending' to show lock screen
-                return;
-            }
+            if (filterCategory !== 'all') query = query.eq('category', filterCategory);
+            if (filterStatus !== 'all') query = query.eq('status', filterStatus);
+            if (viewMode === 'trash') query = query.eq('deletion_requested', true);
+            else query = query.eq('deletion_requested', false);
 
-            const statsData = await statsRes.json();
-            setStats(statsData);
+            const { data: feedbackData, error } = await query;
+            if (error) throw error;
 
-            // Fetch Feedback with filters
-            const params = new URLSearchParams({
-                category: filterCategory !== 'all' ? filterCategory : '',
-                status: filterStatus !== 'all' ? filterStatus : '',
-                limit: '50',
-                deletion_status: viewMode === 'trash' ? 'pending' : 'active'
-            });
-            const feedbackRes = await fetch(`${API_BASE}/admin/feedback?${params}`, { headers });
-
-            if (feedbackRes.status === 403) {
-                setLoading(false);
-                setRole('pending' as any);
-                return;
-            }
-
-            const feedbackData = await feedbackRes.json();
-            setFeedback(feedbackData.feedback);
+            setFeedback(feedbackData || []);
         } catch (err) {
             console.error('Failed to fetch data', err);
         } finally {
@@ -157,47 +130,14 @@ export const Dashboard: React.FC = () => {
     };
 
     useEffect(() => {
-        const runDiagnostics = async () => {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-            if (!token) return;
-
-            try {
-                const res = await fetch(`${API_BASE}/admin/diagnose`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
-                });
-                if (res.ok) {
-                    const data = await res.json();
-                    if (data.status !== 'healthy') {
-                        // Only alert if explicitly reporting issues
-                        if (data.missingTables && data.missingTables.length > 0) {
-                            alert(`CRITICAL SYSTEM WARNING:\nDatabase Schema Out of Sync.\n\nMissing Tables:\n${JSON.stringify(data.missingTables, null, 2)}`);
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error('Diagnostics failed', err);
-            }
-        };
-
         fetchData();
-        runDiagnostics();
     }, [filterCategory, filterStatus, viewMode]);
 
     const updateStatus = async (id: number, newStatus: Status) => {
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+            const { error } = await supabase.from('feedback').update({ status: newStatus }).eq('id', id);
+            if (error) throw error;
 
-            await fetch(`${API_BASE}/admin/feedback/${id}/status`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${token}`
-                },
-                body: JSON.stringify({ status: newStatus })
-            });
-            // Optimistic update
             setFeedback(prev => prev.map(item =>
                 item.id === id ? { ...item, status: newStatus } : item
             ));
@@ -213,21 +153,14 @@ export const Dashboard: React.FC = () => {
         if (!editingItem) return;
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
+            const { error } = await supabase.from('feedback').update({
+                message: editingItem.message,
+                category: editingItem.category,
+                priority: editingItem.priority
+            }).eq('id', editingItem.id);
 
-            await fetch(`${API_BASE}/admin/feedback/${editingItem.id}/details`, {
-                method: 'PATCH',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    message: editingItem.message,
-                    category: editingItem.category,
-                    priority: editingItem.priority
-                })
-            });
+            if (error) throw error;
+
             setEditingItem(null);
             fetchData();
             addToast('Feedback updated successfully', 'success');
@@ -239,12 +172,8 @@ export const Dashboard: React.FC = () => {
 
     const handleRestore = async (id: number) => {
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-            await fetch(`${API_BASE}/admin/feedback/${id}/restore`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
+            const { error } = await supabase.from('feedback').update({ deletion_requested: false }).eq('id', id);
+            if (error) throw error;
             fetchData();
             addToast('Feedback restored to Active', 'success');
         } catch (err) {
@@ -257,22 +186,28 @@ export const Dashboard: React.FC = () => {
         if (!confirmDelete) return;
 
         try {
-            const { data: { session } } = await supabase.auth.getSession();
-            const token = session?.access_token;
-
-            let url = '';
-            if (confirmDelete.type === 'single') url = `${API_BASE}/admin/feedback/${confirmDelete.id}`;
-            if (confirmDelete.type === 'resolved') url = `${API_BASE}/admin/feedback/resolved`;
-            if (confirmDelete.type === 'all') url = `${API_BASE}/admin/feedback`;
-
-            await fetch(url, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
+            let error;
+            if (confirmDelete.type === 'single') {
+                // Hard delete if already in trash or superadmin, else soft delete
+                if (viewMode === 'trash') {
+                    const { error: e } = await supabase.from('feedback').delete().eq('id', confirmDelete.id);
+                    error = e;
+                } else {
+                    const { error: e } = await supabase.from('feedback').update({ deletion_requested: true }).eq('id', confirmDelete.id);
+                    error = e;
                 }
-            });
+            } else if (confirmDelete.type === 'resolved') {
+                const { error: e } = await supabase.from('feedback').delete().eq('status', 'resolved');
+                error = e;
+            } else if (confirmDelete.type === 'all') {
+                const { error: e } = await supabase.from('feedback').delete().neq('id', 0);
+                error = e;
+            }
+
+            if (error) throw error;
+
             setConfirmDelete(null);
-            fetchData(); // Refresh all
+            fetchData();
 
             if (viewMode === 'trash' || confirmDelete.type === 'resolved' || confirmDelete.type === 'all') {
                 addToast('Items permanently deleted', 'delete');

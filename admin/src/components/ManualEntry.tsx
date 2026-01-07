@@ -4,7 +4,7 @@ import { X, Plus, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import type { Category, Priority } from '../types';
 
-const API_BASE = 'http://localhost:3000/api';
+
 
 interface ManualEntryProps {
     onClose: () => void;
@@ -21,17 +21,17 @@ export const ManualEntry: React.FC<ManualEntryProps> = ({ onClose, onSuccess }) 
         e.preventDefault();
         setLoading(true);
 
-        const { data: { session } } = await supabase.auth.getSession();
-        const token = session?.access_token;
+        const { error } = await supabase.from('feedback').insert([{
+            category,
+            message,
+            priority,
+            status: 'new'
+        }]);
 
-        await fetch(`${API_BASE}/admin/feedback`, {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${token}`,
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ category, message, priority, status: 'new' })
-        });
+        if (error) {
+            console.error('Submission failed', error);
+            // Optional: Handle error UI
+        }
 
         setLoading(false);
         onSuccess();
