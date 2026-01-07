@@ -52,30 +52,13 @@ export const Dashboard: React.FC = () => {
     const [currentTab, setCurrentTab] = useState<'feedback' | 'users' | 'logs' | 'traffic' | 'metrics'>('feedback');
     const [showManualEntry, setShowManualEntry] = useState(false);
 
-    // Fetch user role on mount
+    // Fetch user role on mount - Default to superadmin for all authenticated users
     useEffect(() => {
         const fetchUserRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
-                console.log('User data:', user);
-                console.log('User email:', user.email);
-                console.log('User metadata:', user.user_metadata);
-                console.log('App metadata:', user.app_metadata);
-
-                // Check user metadata for role
-                const userRole = user.user_metadata?.role || user.app_metadata?.role;
-
-                // Also check if email matches a superadmin pattern (fallback)
-                const isSuperadmin = userRole === 'superadmin' ||
-                    user.email?.includes('irfanasim') ||
-                    user.email?.includes('superadmin');
-
-                console.log('Detected role:', userRole);
-                console.log('Is superadmin?', isSuperadmin);
-
-                const finalRole = isSuperadmin ? 'superadmin' : (userRole || 'admin');
-                console.log('Final role set to:', finalRole);
-                setRole(finalRole);
+                // Simply set to superadmin for all authenticated users
+                setRole('superadmin');
             }
         };
         fetchUserRole();
