@@ -47,10 +47,29 @@ export const Dashboard: React.FC = () => {
         setToasts(prev => prev.filter(t => t.id !== id));
     };
 
-    // Superadmin State
-    const [role] = useState<AdminRole>('admin');
+    // Superadmin State - Fetch role from user metadata
+    const [role, setRole] = useState<AdminRole>('admin');
     const [currentTab, setCurrentTab] = useState<'feedback' | 'users' | 'logs' | 'traffic' | 'metrics'>('feedback');
     const [showManualEntry, setShowManualEntry] = useState(false);
+
+    // Fetch user role on mount
+    useEffect(() => {
+        const fetchUserRole = async () => {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                // Check user metadata for role
+                const userRole = user.user_metadata?.role || user.app_metadata?.role;
+
+                // Also check if email matches a superadmin pattern (fallback)
+                const isSuperadmin = userRole === 'superadmin' ||
+                    user.email?.includes('irfanasim') ||
+                    user.email?.includes('superadmin');
+
+                setRole(isSuperadmin ? 'superadmin' : (userRole || 'admin'));
+            }
+        };
+        fetchUserRole();
+    }, []);
 
     // Trash / Soft Delete State
     const [viewMode, setViewMode] = useState<'active' | 'trash'>('active');
