@@ -57,6 +57,11 @@ export const Dashboard: React.FC = () => {
         const fetchUserRole = async () => {
             const { data: { user } } = await supabase.auth.getUser();
             if (user) {
+                console.log('User data:', user);
+                console.log('User email:', user.email);
+                console.log('User metadata:', user.user_metadata);
+                console.log('App metadata:', user.app_metadata);
+
                 // Check user metadata for role
                 const userRole = user.user_metadata?.role || user.app_metadata?.role;
 
@@ -65,7 +70,12 @@ export const Dashboard: React.FC = () => {
                     user.email?.includes('irfanasim') ||
                     user.email?.includes('superadmin');
 
-                setRole(isSuperadmin ? 'superadmin' : (userRole || 'admin'));
+                console.log('Detected role:', userRole);
+                console.log('Is superadmin?', isSuperadmin);
+
+                const finalRole = isSuperadmin ? 'superadmin' : (userRole || 'admin');
+                console.log('Final role set to:', finalRole);
+                setRole(finalRole);
             }
         };
         fetchUserRole();
@@ -307,7 +317,20 @@ export const Dashboard: React.FC = () => {
                     <h1 style={{ fontSize: '2rem', fontWeight: 700, letterSpacing: '-0.02em', color: '#fff' }}>
                         Command Deck
                     </h1>
-                    <p style={{ color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>MEC Analysis & Control</p>
+                    <p style={{ color: 'rgba(255,255,255,0.4)', marginTop: '4px' }}>
+                        MEC Analysis & Control
+                        <span style={{
+                            marginLeft: '10px',
+                            padding: '2px 8px',
+                            background: role === 'superadmin' ? '#a855f7' : '#3b82f6',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem',
+                            color: '#fff',
+                            textTransform: 'uppercase'
+                        }}>
+                            {role}
+                        </span>
+                    </p>
                 </div>
                 <button
                     onClick={() => fetchData()}
