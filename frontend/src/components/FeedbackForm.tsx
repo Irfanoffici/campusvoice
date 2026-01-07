@@ -5,6 +5,7 @@ import { CategoryChips } from './CategoryChips';
 import { PriorityControl } from './PriorityControl';
 import { SuccessView } from './SuccessView';
 import { ArrowRight, Loader2 } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 export const FeedbackForm: React.FC = () => {
     const [category, setCategory] = useState<Category | null>(null);
@@ -21,24 +22,21 @@ export const FeedbackForm: React.FC = () => {
         setIsSubmitting(true);
         setError(null);
 
-        const formData = { category, message, priority };
-
         try {
             await new Promise(r => setTimeout(r, 800)); // Aesthetic delay
 
-            const response = await fetch('http://localhost:3000/api/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(formData)
-            });
+            const { error: supabaseError } = await supabase
+                .from('feedback')
+                .insert([{
+                    category,
+                    message,
+                    priority,
+                    status: 'new' // Default status
+                }]);
 
-            const result = await response.json();
+            if (supabaseError) throw supabaseError;
 
-            if (response.ok) {
-                setIsSuccess(true);
-            } else {
-                throw new Error(result.error || 'Submission failed');
-            }
+            setIsSuccess(true);
         } catch (err: any) {
             console.error(err);
             setError(err.message || 'Something went wrong');
