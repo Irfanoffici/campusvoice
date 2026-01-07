@@ -1,0 +1,15 @@
+[build]
+  command = "npm run build"
+  publish = "frontend/dist"
+
+# Handle Admin SPA routing
+[[redirects]]
+  from = "/admin/*"
+  to = "/admin/index.html"
+  status = 200
+
+# Handle Frontend SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -1,0 +1,8 @@
+{
+  "name": "campus-feedback-deploy",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix admin && npm run build --prefix admin && mkdir -p frontend/dist/admin && cp -r admin/dist/* frontend/dist/admin/"
+  }
+}
