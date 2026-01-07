@@ -1,0 +1,123 @@
+<frontend_system>
+
+  <identity>
+    <product_name>Campus Voice</product_name>
+    <purpose>Anonymous campus feedback platform</purpose>
+    <design_goal>
+      Create a premium, calm, world-class interface inspired by Apple,
+      Google Material You, Samsung One UI, and Huawei HarmonyOS.
+    </design_goal>
+  </identity>
+
+  <design_philosophy>
+    <tone>Calm, confident, trustworthy, modern</tone>
+    <avoid>
+      Flashy animations, neon colors, cluttered layouts,
+      gamified UI, harsh contrasts
+    </avoid>
+    <prioritize>
+      White space, soft shadows, smooth transitions,
+      clarity, emotional comfort
+    </prioritize>
+  </design_philosophy>
+
+  <layout>
+    <structure>
+      Single-page immersive layout
+    </structure>
+    <container>
+      Floating central card with soft glassmorphism
+    </container>
+    <background>
+      Subtle gradient with depth and blur
+    </background>
+  </layout>
+
+  <typography>
+    <primary_font>Inter</primary_font>
+    <fallback_fonts>system-ui, SF Pro, Roboto</fallback_fonts>
+    <hierarchy>
+      Clear heading scale, relaxed body text, generous line height
+    </hierarchy>
+  </typography>
+
+  <color_system>
+    <base>Neutral light</base>
+    <accent>Context-aware (changes by category)</accent>
+    <contrast>Soft, not harsh</contrast>
+  </color_system>
+
+  <components>
+
+    <feedback_card>
+      <appearance>
+        Rounded corners, frosted glass effect,
+        subtle border glow, layered depth
+      </appearance>
+
+      <category_selector>
+        Type>Chip-based selector</Type>
+        Interaction>Magnetic hover, smooth scale</Interaction>
+      </category_selector>
+
+      <priority_selector>
+        Type>Visual intensity slider or pill buttons</Type>
+        Mapping>
+          Low → Calm
+          Medium → Noticeable
+          High → Strong
+          Critical → Urgent but not alarming
+        </Mapping>
+      </priority_selector>
+
+      <message_input>
+        Type>Auto-expanding textarea</Type>
+        Behavior>Grows naturally with content</Behavior>
+      </message_input>
+
+      <submit_action>
+        Button>Primary call-to-action</Button>
+        Animation>
+          Morphs into success state with checkmark and soft glow
+        </Animation>
+      </submit_action>
+
+    </feedback_card>
+
+  </components>
+
+  <micro_interactions>
+    <hover>
+      Gentle lift, shadow bloom, no sudden jumps
+    </hover>
+    <focus>
+      Soft ring, subtle emphasis
+    </focus>
+    <transition>
+      200–300ms easing, natural curves
+    </transition>
+  </micro_interactions>
+
+  <responsiveness>
+    <mobile>
+      Single column, thumb-friendly spacing,
+      no feature loss
+    </mobile>
+    <desktop>
+      Centered composition with breathing space
+    </desktop>
+  </responsiveness>
+
+  <accessibility>
+    <contrast>WCAG compliant</contrast>
+    <keyboard_navigation>Enabled</keyboard_navigation>
+    <motion_reduction>Respect prefers-reduced-motion</motion_reduction>
+  </accessibility>
+
+  <performance>
+    <goal>
+      Feels instant, fluid, and lightweight
+    </goal>
+  </performance>
+
+</frontend_system>
