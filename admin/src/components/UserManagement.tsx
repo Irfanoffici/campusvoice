@@ -231,7 +231,7 @@ export const UserManagement = () => {
                                     color: '#fff'
                                 }}
                             />
-                            {inviteMessage && <div style={{ color: inviteMessage.includes('error') ? '#ef4444' : '#10b981', fontSize: '0.9rem' }}>{inviteMessage}</div>}
+
                             <div style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
                                 <button type="button" onClick={() => setShowInvite(false)} style={{ flex: 1, padding: '12px', borderRadius: '12px', background: 'rgba(255,255,255,0.1)', color: '#fff', border: 'none', cursor: 'pointer' }}>Cancel</button>
                                 <button type="submit" style={{ flex: 1, padding: '12px', borderRadius: '12px', background: '#3b82f6', color: '#fff', border: 'none', cursor: 'pointer', fontWeight: 600 }}>Whitelist</button>
