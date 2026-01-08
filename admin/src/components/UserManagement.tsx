@@ -94,12 +94,35 @@ export const UserManagement = () => {
 
     const handleInvite = async (e: React.FormEvent) => {
         e.preventDefault();
-        alert('Invite feature requires backend integration.');
+
+        try {
+            const { api } = await import('../lib/api');
+            await api.users.invite(inviteEmail, 'resolver');
+
+            setShowInvite(false);
+            setInviteEmail('');
+            alert('User invited successfully!');
+        } catch (err: any) {
+            console.error('Invite failed:', err);
+            alert(`Failed to invite user: ${err.message}`);
+        }
     };
 
     const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        alert('User creation requires backend integration or Edge Functions.');
+
+        try {
+            const { api } = await import('../lib/api');
+            await api.users.create(newUser.email, newUser.password, newUser.role);
+
+            setShowCreate(false);
+            setNewUser({ email: '', password: '', role: 'resolver' });
+            fetchUsers(); // Refresh the list
+            alert('User created successfully!');
+        } catch (err: any) {
+            console.error('User creation failed:', err);
+            alert(`Failed to create user: ${err.message}`);
+        }
     };
 
     const handleUpdateRole = async () => {

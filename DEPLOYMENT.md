@@ -20,6 +20,7 @@ VITE_SUPABASE_KEY=your-supabase-anon-key
 ```env
 VITE_SUPABASE_URL=your-supabase-url
 VITE_SUPABASE_KEY=your-supabase-anon-key
+VITE_BACKEND_URL=http://localhost:3000
 ```
 
 **Backend** (`backend/.env`):
@@ -32,17 +33,36 @@ MASTER_ADMIN_EMAIL=your-email@example.com
 
 ### Running Locally
 
+> **IMPORTANT**: The admin panel requires the backend server to be running for user management features (create user, invite, etc.)
+
 ```bash
 # Install dependencies (from root)
 npm install
 
-# Start all services
+# Start backend server (REQUIRED)
+npm run dev:backend   # Backend on http://localhost:3000
+
+# Start frontend and admin (in separate terminals)
 npm run dev:frontend  # Frontend on http://localhost:5173
 npm run dev:admin     # Admin on http://localhost:5174
-npm run dev:backend   # Backend on http://localhost:3000
 ```
 
-## Production Deployment (Netlify)
+## Production Deployment
+
+> **CRITICAL**: The admin panel requires a backend server for user management features. You must deploy the backend separately.
+
+### Option 1: Deploy Backend to Railway/Render (Recommended)
+
+1. Create account on [Railway](https://railway.app) or [Render](https://render.com)
+2. Deploy the `backend` folder as a Node.js service
+3. Set environment variables:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+   - `MASTER_ADMIN_EMAIL`
+   - `PORT` (Railway auto-assigns, Render uses 10000)
+4. Note the deployed backend URL (e.g., `https://your-app.railway.app`)
+
+### Option 2: Frontend/Admin on Netlify
 
 ### Step 1: Configure Environment Variables
 
@@ -51,6 +71,7 @@ npm run dev:backend   # Backend on http://localhost:3000
 3. Add the following variables:
    - `VITE_SUPABASE_URL` = `https://doajmxrjnkwflwjysuyj.supabase.co`
    - `VITE_SUPABASE_KEY` = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRvYWpteHJqbmt3Zmx3anlzdXlqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc4MDkxMTcsImV4cCI6MjA4MzM4NTExN30.JEolN04ntBMYrONwvHwHVf_aylwwL39uyg4qTVCsXv4`
+   - `VITE_BACKEND_URL` = `https://your-backend-url.railway.app` (from Step 1)
 
 ### Step 2: Build Configuration
 
