@@ -1,0 +1,8 @@
+frontend
+admin
+frontend_legacy
+admin_legacy
+.git
+.vscode
+*.md
+!backend
