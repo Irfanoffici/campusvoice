@@ -3,6 +3,9 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "build": "npm install --prefix frontend && npm run build --prefix frontend && npm install --prefix admin && npm run build --prefix admin && mkdir -p frontend/dist/admin && cp -r admin/dist/* frontend/dist/admin/"
+    "build": "cd frontend && npm install && npm run build && cd ../admin && npm install && npm run build && cd .. && node scripts/copy-admin.js"
+  },
+  "devDependencies": {
+    "fs-extra": "^11.1.1"
   }
 }
