@@ -27,19 +27,18 @@ export const UserManagement = () => {
 
     const fetchUsers = async () => {
         try {
-            // In serverless, we can't easily list all users without a specialized table or edge function.
-            // We will just show the current session user for now to prevent crashes.
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                // Mocking the AdminUser structure based on the auth user
-                setUsers([{
-                    id: user.id,
-                    email: user.email || 'unknown',
-                    role: 'superadmin', // Assume current user is valid if they logged in
-                    approved: true,
-                    created_at: user.created_at
-                }]);
+            // Query the admins table directly from Supabase
+            const { data, error } = await supabase
+                .from('admins')
+                .select('*')
+                .order('created_at', { ascending: false });
+
+            if (error) {
+                console.error('Error fetching users:', error);
+                return;
             }
+
+            setUsers(data || []);
         } catch (err) {
             console.error(err);
         } finally {
@@ -49,12 +48,48 @@ export const UserManagement = () => {
 
     useEffect(() => { fetchUsers(); }, []);
 
-    const toggleApproval = async (_id: string, _currentStatus: boolean) => {
-        alert('Action requires backend service role.');
+    const toggleApproval = async (id: string, currentStatus: boolean) => {
+        try {
+            const { error } = await supabase
+                .from('admins')
+                .update({ approved: !currentStatus })
+                .eq('id', id);
+
+            if (error) {
+                alert(`Error: ${error.message}`);
+                return;
+            }
+
+            // Refresh the list
+            fetchUsers();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update approval status');
+        }
     };
 
-    const deleteUser = async (_id: string) => {
-        alert('Action requires backend service role.');
+    const deleteUser = async (id: string) => {
+        if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+            return;
+        }
+
+        try {
+            const { error } = await supabase
+                .from('admins')
+                .delete()
+                .eq('id', id);
+
+            if (error) {
+                alert(`Error: ${error.message}`);
+                return;
+            }
+
+            // Refresh the list
+            fetchUsers();
+        } catch (err) {
+            console.error(err);
+            alert('Failed to delete user');
+        }
     };
 
     const handleInvite = async (e: React.FormEvent) => {
@@ -68,8 +103,26 @@ export const UserManagement = () => {
     };
 
     const handleUpdateRole = async () => {
-        alert('Role updates require backend integration.');
-        setShowRoleEdit(false);
+        if (!selectedUser) return;
+
+        try {
+            const { error } = await supabase
+                .from('admins')
+                .update({ role: newRole })
+                .eq('id', selectedUser.id);
+
+            if (error) {
+                alert(`Error: ${error.message}`);
+                return;
+            }
+
+            // Refresh the list
+            fetchUsers();
+            setShowRoleEdit(false);
+        } catch (err) {
+            console.error(err);
+            alert('Failed to update role');
+        }
     };
 
     const openRoleModal = (user: AdminUser) => {
@@ -82,17 +135,15 @@ export const UserManagement = () => {
 
     return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ color: '#aaa', fontSize: '0.9rem' }}>Serverless Mode: Advanced user management disabled</span>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '10px' }}>
                     <button
                         onClick={() => setShowInvite(true)}
                         style={{
                             background: 'rgba(59, 130, 246, 0.1)', color: '#3b82f6', border: 'none',
                             padding: '10px 20px', borderRadius: '12px', fontWeight: 600,
-                            cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.5
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
                         }}
-                        disabled
                     >
                         + Invite Agent
                     </button>
@@ -101,9 +152,8 @@ export const UserManagement = () => {
                         style={{
                             background: '#3b82f6', color: '#fff', border: 'none',
                             padding: '10px 20px', borderRadius: '12px', fontWeight: 600,
-                            cursor: 'not-allowed', display: 'flex', alignItems: 'center', gap: '8px', opacity: 0.5
+                            cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px'
                         }}
-                        disabled
                     >
                         + Create User
                     </button>

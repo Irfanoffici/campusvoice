@@ -15,8 +15,10 @@ export const SystemVisualizer = () => {
             // Check basic connectivity checking a public table or just assuming true if query works
             const { count: feedbackCount, error: fError } = await supabase.from('feedback').select('*', { count: 'exact', head: true });
 
-            // For admins, we might not have access to auth.users. 
-            // We'll try to count from a public profiles table if it exists, or just default to 1
+            // Query the admins table to get the actual count
+            const { count: adminsCount } = await supabase.from('admins').select('*', { count: 'exact', head: true });
+
+            // Query admin logs
             const { count: logsCount } = await supabase.from('admin_logs').select('*', { count: 'exact', head: true });
 
             if (fError) throw fError;
@@ -27,7 +29,7 @@ export const SystemVisualizer = () => {
                 memory: { rss: 0, heapTotal: 0, heapUsed: 0, external: 0, arrayBuffers: 0 }, // Mocked
                 counts: {
                     feedback: feedbackCount || 0,
-                    admins: 1, // Placeholder
+                    admins: adminsCount || 0,
                     logs: logsCount || 0
                 },
                 timestamp: new Date().toISOString()
