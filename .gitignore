@@ -129,3 +129,5 @@ backend/uploads/
 # Package lock files (choose one - if using npm, keep package-lock.json)
 # package-lock.json   # Uncomment if you want to ignore package-lock.json
 # yarn.lock          # Uncomment if you want to ignore yarn.lock
+.vercel
+.env*.local
